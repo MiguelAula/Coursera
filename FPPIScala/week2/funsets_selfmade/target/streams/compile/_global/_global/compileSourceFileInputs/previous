@@ -1,0 +1,1 @@
+["sbt.Task[scala.collection.immutable.Map[java.lang.String, scala.collection.Seq[scala.Tuple2[java.nio.file.Path, sbt.nio.FileStamp]]]]",{"2.13.3":{"hashes":[["/home/miguel/workspace/Coursera/FPPIScala/Exercises/src/main/scala/week2.scala","ba9df20412bc5a65feac2de4abfd4ada9a1d15de"]],"lastModifiedTimes":[]}}]
