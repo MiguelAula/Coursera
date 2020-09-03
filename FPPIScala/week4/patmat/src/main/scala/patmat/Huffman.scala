@@ -70,7 +70,17 @@ trait Huffman extends HuffmanInterface {
    *       println("integer is  : "+ theInt)
    *   }
    */
-  def times(chars: List[Char]): List[(Char, Int)] = 
+  def times(chars: List[Char]): List[(Char, Int)] = {
+    def timesCount(chars: List[Char], counter: Int = 1): List[(Char, Int)] =
+      chars.sorted match {
+        case Nil => Nil
+        case head :: Nil => List((head,counter))
+        case head :: mid :: tail =>
+          if (head == mid) timesCount(mid :: tail,counter+1)
+          else (head,counter) :: timesCount(mid :: tail)
+      }
+    timesCount(chars)
+  }
 
   /**
    * Returns a list of `Leaf` nodes for a given frequency table `freqs`.
@@ -79,12 +89,13 @@ trait Huffman extends HuffmanInterface {
    * head of the list should have the smallest weight), where the weight
    * of a leaf is the frequency of the character.
    */
-  def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] = ???
+  def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] =
+    freqs.sortWith((pair1,pair2) => pair1._2 <= pair2._2).map(pair => Leaf(pair._1,pair._2))
 
   /**
    * Checks whether the list `trees` contains only one single code tree.
    */
-  def singleton(trees: List[CodeTree]): Boolean = ???
+  def singleton(trees: List[CodeTree]): Boolean = trees.length == 1
 
   /**
    * The parameter `trees` of this function is a list of code trees ordered
