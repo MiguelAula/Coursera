@@ -147,7 +147,30 @@ trait Huffman extends HuffmanInterface {
    * This function decodes the bit sequence `bits` using the code tree `tree` and returns
    * the resulting list of characters.
    */
-  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = ???
+  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
+    def decodeRec(tree: CodeTree, subTree: CodeTree, bits: List[Bit]): List[Char] = {
+      if (bits.length == 0) Nil
+      else
+        subTree match {
+          case leaf: Leaf => leaf.char :: decodeRec(tree,tree,bits.tail)
+          case fork: Fork =>
+            if (bits.head == 0) decodeRec(tree,fork.left,bits.tail)
+            else decodeRec(tree,fork.right,bits.tail)
+        }
+    }
+    decodeRec(tree,tree,bits)
+    /*
+    //first impl
+    if (bits.length == 0) Nil
+    else
+      tree match {
+        case leaf: Leaf => leaf.char :: decode(tree,bits.tail)  //we need the original tree here, so we probably need to use tail recursion to add that extra param
+        case fork: Fork =>
+          if (bits.head == 0) decode(fork.left,bits.tail)
+          else decode(fork.right,bits.tail)
+      }
+     */
+  }
 
   /**
    * A Huffman coding tree for the French language.
@@ -165,7 +188,7 @@ trait Huffman extends HuffmanInterface {
   /**
    * Write a function that returns the decoded secret
    */
-  def decodedSecret: List[Char] = ???
+  def decodedSecret: List[Char] = decode(frenchCode,secret)
 
 
   // Part 4a: Encoding using Huffman tree
@@ -174,7 +197,15 @@ trait Huffman extends HuffmanInterface {
    * This function encodes `text` using the code tree `tree`
    * into a sequence of bits.
    */
-  def encode(tree: CodeTree)(text: List[Char]): List[Bit] = ???
+  def encode(tree: CodeTree)(text: List[Char]): List[Bit] = ???/*{
+    def encodeRec(tree: CodeTree,subTree: CodeTree)(text: List[Char]): List[Bit] = {
+      tree match {
+        case leaf: Leaf =>
+        case fork: Fork =>
+      }
+    }
+    encodeRec(tree,tree)(text)
+  }*/
 
   // Part 4b: Encoding using code table
 
