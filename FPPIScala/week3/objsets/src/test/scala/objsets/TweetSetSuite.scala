@@ -63,3 +63,31 @@ class TweetSetSuite {
 
   @Rule def individualTestTimeout = new org.junit.rules.Timeout(10 * 1000)
 }
+
+
+class TweetSetSuiteExtended {
+  import objsets.GoogleVsApple.{apple, google}
+
+  lazy val myTweets: TweetSet = new Empty()
+    .incl(new Tweet("Pepe", "potato salad", 20))
+    .incl(new Tweet("Lucas", "android mola", 30))
+    .incl(new Tweet("Jorge", "this is hilariOS", 80))
+    .incl(new Tweet("Vero", "I love to travel across the galaxy", 20))
+    .incl(new Tweet("XPeke", "backdoor that nexus", 200))
+    .incl(new Tweet("Marcus", "flipad en colores", 10))
+  lazy val googleTweets: TweetSet = myTweets.filter(tw => google.exists(googleStr => tw.text.contains(googleStr)))
+  lazy val appleTweets: TweetSet = myTweets.filter(tw => apple.exists(appleStr => tw.text.contains(appleStr)))
+  /**
+   * A list of all tweets mentioning a keyword from either apple or google,
+   * sorted by the number of retweets.
+   */
+  lazy val trending: TweetList = googleTweets.union(appleTweets).descendingByRetweet
+
+  /*
+  Si intento usar la funció map sobre trending es queixa, entenc que es perquè la classe TweetSet no hereta de cap de les coleccions de scala que tenen el map.
+  Com podriem implementarla?
+  */
+  //@Test def `google and apple test`: Unit =
+    //assertEquals(trending.toString == "User: XPeke\nText: backdoor that nexus [200]\nUser: Jorge\nText: this is hilariOS [80]\nUser: Jorge\nText: this is hilariOS [80]\nUser: Lucas\nText: android mola [30]\nUser: Vero\nText: I love to travel across the galaxy [20]\nUser: Marcus\nText: flipad en colores [10]")
+
+}

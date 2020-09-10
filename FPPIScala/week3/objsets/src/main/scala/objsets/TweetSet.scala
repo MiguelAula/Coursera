@@ -44,14 +44,13 @@ abstract class TweetSet extends TweetSetInterface {
    * Question: Can we implement this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-  def filter(p: Tweet => Boolean): TweetSet /* = filterAcc(p, new Empty)*/
+  def filter(p: Tweet => Boolean): TweetSet = filterAcc(p, new Empty)
 
   /**
    * This is a helper method for `filter` that propagates the accumulated tweets.
    */
-  /*
   def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet
-   */
+
 
   /**
    * Returns a new `TweetSet` that is the union of `TweetSet`s `this` and `that`.
@@ -114,11 +113,7 @@ abstract class TweetSet extends TweetSetInterface {
 class Empty extends TweetSet {
   def isEmpty: Boolean = true
 
-  def filter(p: Tweet => Boolean): TweetSet = this
-
-  /*
   def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = acc
-  */
 
   def union(that: TweetSet): TweetSet = that
 
@@ -142,31 +137,42 @@ class Empty extends TweetSet {
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
   def isEmpty: Boolean = false
 
+  def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet =
+    if (p(this.elem)) left.filterAcc(p,acc.incl(elem)).union(right.filterAcc(p,acc.incl(elem)))
+    else left.filterAcc(p,acc).union(right.filterAcc(p,acc))
+
+  /*  NOTA:
+  la funció filterAcc es podria ometre... es pot acumular el set filtrat recursivament en els retorns de la funció filter mateixa...
+
+  //Empty
+  def filter(p: Tweet => Boolean): TweetSet = this
+
+  //NonEmpty
   def filter(p: Tweet => Boolean): TweetSet =
     if (p(this.elem)) new NonEmpty(elem,left.filter(p),right.filter(p))
     else left.filter(p).union(right.filter(p))
-
-  /*
-  def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = ???
   */
 
   def union(that: TweetSet): TweetSet =
     this.remove(elem).union(that.incl(elem))
 
-  def mostRetweeted: Tweet = {
+  def mostRetweeted: Tweet =
     if (right.isEmpty && left.isEmpty) elem
     else if (right.isEmpty) {
-      if (left.mostRetweeted.retweets > elem.retweets) left.mostRetweeted
+      val leftMostRet = left.mostRetweeted
+      if (leftMostRet.retweets > elem.retweets) leftMostRet
       else elem
     } else if (left.isEmpty) {
-      if (right.mostRetweeted.retweets > elem.retweets) right.mostRetweeted
+      val rightMostRet = right.mostRetweeted
+      if (rightMostRet.retweets > elem.retweets) rightMostRet
       else elem
     } else {
-      if (elem.retweets > right.mostRetweeted.retweets && elem.retweets > left.mostRetweeted.retweets) elem
-      else if (right.mostRetweeted.retweets > left.mostRetweeted.retweets) right.mostRetweeted
-      else left.mostRetweeted
+      val leftMostRet = left.mostRetweeted
+      val rightMostRet = right.mostRetweeted
+      if (elem.retweets > leftMostRet.retweets && elem.retweets > rightMostRet.retweets) elem
+      else if (rightMostRet.retweets > leftMostRet.retweets) rightMostRet
+      else leftMostRet
     }
-  }
 
   def descendingByRetweet: TweetList = {
     val mostRet: Tweet = this.mostRetweeted
@@ -229,7 +235,7 @@ object GoogleVsApple {
   /**
    *  Miki testing tweets
    */
-  /*
+
   lazy val myTweets: TweetSet = new Empty()
     .incl(new Tweet("Pepe", "potato salad", 20))
     .incl(new Tweet("Lucas", "android mola", 30))
@@ -239,14 +245,15 @@ object GoogleVsApple {
     .incl(new Tweet("Marcus", "flipad en colores", 10))
   lazy val googleTweets: TweetSet = myTweets.filter(tw => google.exists(googleStr => tw.text.contains(googleStr)))
   lazy val appleTweets: TweetSet = myTweets.filter(tw => apple.exists(appleStr => tw.text.contains(appleStr)))
-  */
+
 
   /**
    *  Original tweets
    */
+    /*
   lazy val googleTweets: TweetSet = TweetReader.allTweets.filter(tw => google.exists(googleStr => tw.text.contains(googleStr)))
   lazy val appleTweets: TweetSet = TweetReader.allTweets.filter(tw => apple.exists(appleStr => tw.text.contains(appleStr)))
-
+*/
   /**
    * A list of all tweets mentioning a keyword from either apple or google,
    * sorted by the number of retweets.

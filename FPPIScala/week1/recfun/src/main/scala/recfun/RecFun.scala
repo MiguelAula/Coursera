@@ -20,6 +20,7 @@ object RecFun extends RecFunInterface {
     if (c == 0 || c == r) 1
     else pascal(c-1,r-1) + pascal(c,r-1)
 
+
   /**
    * Exercise 2
    */
@@ -28,10 +29,9 @@ object RecFun extends RecFunInterface {
     def balanceAux(chars: List[Char], count: Int = 0): Int = {
       if (chars.isEmpty) count
       else if (chars.head == ')' && count == 0) -1
-      else
-        if (chars.head == '(') balanceAux(chars.tail,count+1)
-        else if (chars.head == ')') balanceAux(chars.tail,count-1)
-        else balanceAux(chars.tail,count)
+      else if (chars.head == '(') balanceAux(chars.tail,count+1)
+      else if (chars.head == ')') balanceAux(chars.tail,count-1)
+      else balanceAux(chars.tail,count)
     }
     balanceAux(chars) == 0
   }

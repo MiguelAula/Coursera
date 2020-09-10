@@ -45,3 +45,34 @@ class HuffmanSuite {
 
   @Rule def individualTestTimeout = new org.junit.rules.Timeout(10 * 1000)
 }
+
+class HuffmanSuiteExtra {
+
+  import Huffman._
+
+  trait TestTrees {
+    val text: List[Char] = string2Chars("Hello")
+    val codeTree: CodeTree = createCodeTree(text)
+    val encoded: List[Bit] = encode(codeTree)(text)
+    val codeTable: CodeTable = convert(codeTree)
+    val decoded: List[Char] = decode(codeTree,encoded)
+  }
+
+  @Test def `encode - decode`: Unit =
+    new TestTrees {
+      assertEquals(decoded, string2Chars("Hello"))
+    }
+
+  @Test def `convert test`: Unit =
+    new TestTrees {
+      assertEquals(codeTable, List(('o',List(0, 0, 0)), ('e',List(0, 0, 1)), ('H',List(0, 1)), ('l',List(1))))
+    }
+
+  @Test def `quick encode`: Unit =
+    new TestTrees {
+      assertEquals(quickEncode(codeTree)(text), encoded)
+    }
+
+
+  @Rule def individualTestTimeout = new org.junit.rules.Timeout(10 * 1000)
+}
