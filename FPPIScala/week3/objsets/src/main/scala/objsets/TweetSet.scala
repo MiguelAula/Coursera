@@ -1,5 +1,7 @@
 package objsets
 
+import scala.annotation.tailrec
+
 /**
  * A class to represent tweets.
  */
@@ -30,7 +32,7 @@ class Tweet(val user: String, val text: String, val retweets: Int) {
  *
  * [1] http://en.wikipedia.org/wiki/Binary_search_tree
  */
-abstract class TweetSet extends TweetSetInterface {
+abstract sealed trait TweetSet extends TweetSetInterface {
   /**
    *  Added by Miki to help implement mostRetweeted
    */
@@ -134,11 +136,11 @@ class Empty extends TweetSet {
   def foreach(f: Tweet => Unit): Unit = ()
 }
 
-class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
+class NonEmpty(val elem: Tweet, val left: TweetSet, val right: TweetSet) extends TweetSet {
   def isEmpty: Boolean = false
 
   def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet =
-    if (p(this.elem)) left.filterAcc(p,acc.incl(elem)).union(right.filterAcc(p,acc.incl(elem)))
+    if (p(this.elem)) left.filterAcc(p,acc.incl(elem)).union(right.filterAcc(p,acc))
     else left.filterAcc(p,acc).union(right.filterAcc(p,acc))
 
   /*  NOTA:
@@ -153,26 +155,29 @@ class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
     else left.filter(p).union(right.filter(p))
   */
 
-  def union(that: TweetSet): TweetSet =
-    this.remove(elem).union(that.incl(elem))
+  def union(that: TweetSet): TweetSet = that match {
+    case _: Empty => this
+    case that: NonEmpty =>
+      if (that.elem.text.length <= this.elem.text.length)
+        new NonEmpty(this.elem,this.left.incl(that.elem).union(that.left),this.right.union(that.right))
+      else
+        new NonEmpty(this.elem,this.left.union(that.left),this.right.incl(that.elem).union(that.right))
+  }
+  //this.left.union(this.right).union(that).incl(this.elem)
 
-  def mostRetweeted: Tweet =
-    if (right.isEmpty && left.isEmpty) elem
-    else if (right.isEmpty) {
-      val leftMostRet = left.mostRetweeted
-      if (leftMostRet.retweets > elem.retweets) leftMostRet
-      else elem
-    } else if (left.isEmpty) {
-      val rightMostRet = right.mostRetweeted
-      if (rightMostRet.retweets > elem.retweets) rightMostRet
-      else elem
-    } else {
-      val leftMostRet = left.mostRetweeted
-      val rightMostRet = right.mostRetweeted
-      if (elem.retweets > leftMostRet.retweets && elem.retweets > rightMostRet.retweets) elem
-      else if (rightMostRet.retweets > leftMostRet.retweets) rightMostRet
-      else leftMostRet
-    }
+
+  def mostRetweeted: Tweet = {
+    def maxRet(tws: Tweet*): Tweet = tws.maxBy(tw => tw.retweets)
+
+    if (right.isEmpty && left.isEmpty)
+      elem
+    else if (right.isEmpty)
+      maxRet(left.mostRetweeted,elem)
+    else if (left.isEmpty)
+      maxRet(right.mostRetweeted,elem)
+    else
+      maxRet(left.mostRetweeted,elem,right.mostRetweeted)
+  }
 
   def descendingByRetweet: TweetList = {
     val mostRet: Tweet = this.mostRetweeted
@@ -250,17 +255,16 @@ object GoogleVsApple {
   /**
    *  Original tweets
    */
-    /*
+  /*
   lazy val googleTweets: TweetSet = TweetReader.allTweets.filter(tw => google.exists(googleStr => tw.text.contains(googleStr)))
   lazy val appleTweets: TweetSet = TweetReader.allTweets.filter(tw => apple.exists(appleStr => tw.text.contains(appleStr)))
-*/
+  */
+  lazy val union: TweetSet = googleTweets.union(appleTweets)
   /**
    * A list of all tweets mentioning a keyword from either apple or google,
    * sorted by the number of retweets.
    */
-  lazy val trending: TweetList = googleTweets.union(appleTweets).descendingByRetweet
-
-
+  lazy val trending: TweetList = union.descendingByRetweet
 }
 
 object Main extends App {

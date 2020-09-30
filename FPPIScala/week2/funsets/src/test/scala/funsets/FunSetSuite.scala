@@ -71,6 +71,12 @@ class FunSetSuite {
     }
   }
 
+  @Test def `asdf`: Unit = {
+    new TestSets {
+      val s =
+    }
+  }
+
 
 
   @Rule def individualTestTimeout = new org.junit.rules.Timeout(10 * 1000)

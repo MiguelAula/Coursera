@@ -13,3 +13,6 @@ isPrime(7)
 isPrime(10)
 isPrime(21)
 isPrime(23)
+
+var scanres = list.scanLeft(Map())((m,s) => m + (s -> 1))
+println(scanres)

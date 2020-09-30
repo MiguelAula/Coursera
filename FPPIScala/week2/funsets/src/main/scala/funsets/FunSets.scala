@@ -39,7 +39,7 @@ trait FunSets extends FunSetsInterface {
    * Returns the difference of the two given sets,
    * the set of all elements of `s` that are not in `t`.
    */
-  def diff(s: FunSet, t: FunSet): FunSet = (x: Int) => s(x) && !t(x) || !s(x) && t(x)
+  def diff(s: FunSet, t: FunSet): FunSet = (x: Int) => s(x) && !t(x)
 
   /**
    * Returns the subset of `s` for which `p` holds.
@@ -69,7 +69,8 @@ trait FunSets extends FunSetsInterface {
    * Returns whether there exists a bounded integer within `s`
    * that satisfies `p`.
    */
-  def exists(s: FunSet, p: Int => Boolean): Boolean = !forall(s,(x: Int) => !p(x))
+  def exists(s: FunSet, p: Int => Boolean): Boolean = !forall(s,!p(_))
+
 
   /**
    * Returns a set transformed by applying `f` to each element of `s`.
@@ -80,7 +81,7 @@ trait FunSets extends FunSetsInterface {
    * Displays the contents of a set
    */
   def toString(s: FunSet): String = {
-    val xs = for (i <- -bound to bound if contains(s, i)) yield i
+    val xs = (-bound to bound).filter(i => contains(s, i)).map(i => i)
     xs.mkString("{", ",", "}")
   }
 

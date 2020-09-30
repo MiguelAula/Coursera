@@ -1,5 +1,7 @@
 package forcomp
 
+import scala.annotation.tailrec
+
 object Anagrams extends AnagramsInterface {
 
   /** A word is simply a `String`. */
@@ -65,7 +67,7 @@ object Anagrams extends AnagramsInterface {
    *
    * It also include the empty subset `List()`.
    *
-   * Example: the subsets of the occurrence list `List(('a', 2), ('b', 2))` are:
+   * Example: the subsets of the occurrence list `List(('c',2), ('a', 2), ('b', 2))` are:
    *
    * List(
    * List(),
@@ -85,11 +87,15 @@ object Anagrams extends AnagramsInterface {
   def combinations(occurrences: Occurrences): List[Occurrences] =
     occurrences match {
       case Nil => List(List())
-      case x :: xs =>
+      case (char,freq) :: xs =>
+        val combi = combinations(xs)
         for {
-          n <- (0 to x._2).toList //por qué tengo que poner .toList aquí???
-          rest <- combinations(xs) //esto es ineficiente? estoy calculando el mismo rest de 0 a x._2 veces? O el compilador lo traduce optimamente?
-        } yield ((x._1, n) :: rest).filter(pair => pair._2 != 0)
+          n <- (0 to freq).toList   //por qué tengo que poner .toList aquí???
+          rest <- combi             //si pongo combinatinos(xs) aquí, entiendo que lo estaría ejecutando n veces, cuando con 1 basta
+        } yield if (n != 0) (char, n) :: rest else rest
+        /* Desugared version:
+        (0 to freq).toList.flatMap(n => combi.map(rest => if (n != 0) (char,n) :: rest else rest))
+         */
     }
 
   /** Subtracts occurrence list `y` from occurrence list `x`.
@@ -102,12 +108,16 @@ object Anagrams extends AnagramsInterface {
    * Note: the resulting value is an occurrence - meaning it is sorted
    * and has no zero-entries.
    */
-  def subtract(x: Occurrences, y: Occurrences): Occurrences = ((x, y) match {
-    case (x, Nil) => x
-    case (x :: xs, y :: ys) =>
-      if (x._1 == y._1) (x._1, x._2 - y._2) :: subtract(xs, ys)
-      else x :: subtract(xs, y :: ys)
-  }).filter(elem => elem._2 != 0)
+  def subtract(x: Occurrences, y: Occurrences): Occurrences = {
+    @tailrec
+    def loop(acc: Occurrences, x: Occurrences, y: Occurrences): Occurrences =
+      (x, y) match {
+        case (xs, Nil) => acc.reverse ::: xs
+        case ((xCh,xFreq) :: xs, (yCh,yFreq) :: ys) if xCh == yCh => loop((xCh,xFreq - yFreq) :: acc,xs,ys)
+        case (x :: xs, y :: ys) => loop(x :: acc,xs, y :: ys)
+      }
+    loop(List(), x, y).filter(elem => elem._2 != 0)
+  }
 
   /** Returns a list of all anagram sentences of the given sentence.
    *
@@ -123,6 +133,8 @@ object Anagrams extends AnagramsInterface {
    * `List("I", "love", "you")`.
    *
    * Here is a full example of a sentence `List("Yes", "man")` and its anagrams for our dictionary:
+   *
+   * List(('y',1),('e',1),('s',1),('m',1),('a',1),('n',1))
    *
    * List(
    * List(en, as, my),
@@ -150,14 +162,70 @@ object Anagrams extends AnagramsInterface {
    * Note: There is only one anagram of an empty sentence.
    */
   def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
-    val sentenceOccs = sentenceOccurrences(sentence)
-    for {
-      combi <- combinations(sentenceOccs)
-      if combi != List() && dictionaryByOccurrences.contains(combi)
-      restCombi = subtract(sentenceOccs, combi)
-      dic2: List[Word] = if (dictionaryByOccurrences.contains(restCombi)) dictionaryByOccurrences(restCombi) else Nil
-    } yield dictionaryByOccurrences(combi) ::: dic2
+    def getSentences(occs: Occurrences): List[Sentence] = occs match {
+      case Nil => List(Nil)
+      case _ :: _ =>
+        //Q: hay alguna forma de poner un valor lazy en una for comprehension?
+        for {
+          combi <- combinations(occs)                                 //sobre cada combinació de les occurrencies de la sentence...
+          if dictionaryByOccurrences.contains(combi)
+          restSentences = getSentences(subtract(occs,combi))
+          word <- dictionaryByOccurrences(combi)                      //i sobre cada paraula trobada al diccionari que coincideixi amb les occurrencies de la combinació actual...
+          rest <- restSentences                                       //i sobre cada frase que es pot fer amb la resta de la sentence (excloent la combinació actual)
+        } yield word :: rest
+
+        /* //desugared version:
+        combinations(occs).flatMap(combi =>
+          if (dictionaryByOccurrences.contains(combi)) {
+            val sentences = getSentences(subtract(occs,combi))
+            dictionaryByOccurrences(combi).flatMap(word =>
+              sentences.map(rest => word :: rest)
+            )
+          } else {
+            List()
+          }
+        )*/
+    }
+    if (sentence.isEmpty) List(Nil) else getSentences(sentenceOccurrences(sentence))
   }
+
+  //a continuación... optimización semi-petándome el principio de "no side effects" de FP :)
+  def sentenceAnagramsMemo(sentence: Sentence): List[Sentence] = {
+    var storage: Map[Occurrences,List[Sentence]] = Map()
+    def getSentences(occs: Occurrences): List[Sentence] = occs match {
+      case Nil => List(Nil)
+      case _ :: _ =>
+        lazy val sentencesCalc = for {
+          combi <- combinations(occs)
+          word <- dictionaryByOccurrences.getOrElse(combi, List())
+          rest <- getSentences(subtract(occs,combi))
+        } yield word :: rest
+        val sentences = storage.getOrElse(occs,sentencesCalc)
+        if (!storage.contains(occs)) storage = storage + (occs -> sentences)
+        sentences
+    }
+    if (sentence.isEmpty) List(Nil) else getSentences(sentenceOccurrences(sentence))
+  }
+  /*
+  def sentenceAnagramsMemo2(sentence: Sentence): List[Sentence] = {
+    def getStorage(occs: Occurrences, storage: Map[Occurrences,List[Sentence]]): Map[Occurrences,List[Sentence]] = occs match {
+      case Nil => storage
+      case _ :: _ =>
+        lazy val newStorage = for {
+          combi <- combinations(occs)
+          if dictionaryByOccurrences.contains(combi)
+          rest = subtract(occs,combi)
+          word <- dictionaryByOccurrences(combi)
+        } yield {
+          if (!storage.contains(combi)) word :: getStorage(rest,storage)(rest)
+        }
+        storage.getOrElse()
+    }
+
+    val occs = sentenceOccurrences(sentence)
+    if (sentence.isEmpty) List(Nil) else getStorage(occs,Map()).getOrElse(occs,List())
+  }*/
+
 }
 
 

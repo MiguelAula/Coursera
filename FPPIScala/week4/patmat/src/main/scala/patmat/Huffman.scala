@@ -12,7 +12,9 @@ import scala.annotation.tailrec
  * present in the leaves below it. The weight of a `Fork` node is the sum of the weights of these
  * leaves.
  */
-abstract class CodeTree
+abstract class CodeTree {
+  def weight: Int
+}
 case class Fork(left: CodeTree, right: CodeTree, chars: List[Char], weight: Int) extends CodeTree
 case class Leaf(char: Char, weight: Int) extends CodeTree
 
@@ -90,14 +92,19 @@ trait Huffman extends HuffmanInterface {
    * The returned list should be ordered by ascending weights (i.e. the
    * head of the list should have the smallest weight), where the weight
    * of a leaf is the frequency of the character.
-   */
+ */
   def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] =
-    freqs.sortWith((pair1,pair2) => pair1._2 <= pair2._2).map(pair => Leaf(pair._1,pair._2))
+    freqs.sortBy(_._2).map{ case(char,weight) => Leaf(char,weight) }
+    //freqs.sortBy(_._2).map((Leaf _).tupled)
 
   /**
    * Checks whether the list `trees` contains only one single code tree.
    */
-  def singleton(trees: List[CodeTree]): Boolean = trees.length == 1
+  def singleton(trees: List[CodeTree]): Boolean = //trees.length == 1
+    trees match {
+      case _ :: Nil => true
+      case _ => false
+    }
 
   /**
    * The parameter `trees` of this function is a list of code trees ordered
@@ -111,11 +118,31 @@ trait Huffman extends HuffmanInterface {
    * If `trees` is a list of less than two elements, that list should be returned
    * unchanged.
    */
-  def combine(trees: List[CodeTree]): List[CodeTree] =
-    if (trees.length >= 2)
-      makeCodeTree(trees.head,trees.tail.head) :: trees.tail.tail
-    else trees
+  def combine(trees: List[CodeTree]): List[CodeTree] = {
+    @tailrec
+    def insertSort(acc: List[CodeTree], tree: CodeTree, trees: List[CodeTree]): List[CodeTree] = trees match {
+      case Nil => acc.reverse ::: List(tree)
+      case x :: xs if x.weight >= tree.weight => acc.reverse ::: tree :: x :: xs
+      case x :: xs if x.weight < tree.weight => insertSort(x :: acc,tree,xs)
+    }
+    trees match {
+      case t1 :: t2 :: tail => insertSort(List(),makeCodeTree(t1,t2),tail)
+      case _ => trees
+    }
+  }
+    /*
+  def combine(trees: List[CodeTree]): List[CodeTree] = {
+    def insertSort(trees: List[CodeTree], tree: CodeTree): List[CodeTree] = trees match {
+      case Nil => List(tree)
+      case x :: xs if x.weight >= tree.weight => tree :: x :: xs
+      case x :: xs if x.weight < tree.weight => x :: insertSort(xs, tree)
+    }
 
+    trees match {
+      case t1 :: t2 :: tail => insertSort(tail, makeCodeTree(t1, t2))
+      case _ => trees
+    }
+  }*/
   /**
    * This function will be called in the following way:
    *
@@ -127,9 +154,12 @@ trait Huffman extends HuffmanInterface {
    * In such an invocation, `until` should call the two functions until the list of
    * code trees contains only one single tree, and then return that singleton list.
    */
-  def until(done: List[CodeTree] => Boolean, merge: List[CodeTree] => List[CodeTree])(trees: List[CodeTree]): List[CodeTree] =
-    if (!done(trees)) until(done,merge)(merge(trees))
-    else trees
+  def until(done: List[CodeTree] => Boolean, merge: List[CodeTree] => List[CodeTree])(trees: List[CodeTree]): List[CodeTree] = {
+    @tailrec
+    def loop(trees: List[CodeTree]): List[CodeTree] =
+      if (!done(trees)) loop(merge(trees)) else trees
+    loop(trees)
+  }
 
   /**
    * This function creates a code tree which is optimal to encode the text `chars`.
@@ -150,16 +180,18 @@ trait Huffman extends HuffmanInterface {
    * the resulting list of characters.
    */
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
-    def decodeRec(tree: CodeTree, subTree: CodeTree, bits: List[Bit]): List[Char] = {
+    @tailrec
+    def decodeRec(acc: List[Char], subTree: CodeTree, bits: List[Bit]): List[Char] = {
       (bits, subTree) match {
-        case (Nil, Leaf(ch, _)) => List(ch)
+        case (Nil, Leaf(ch, _)) => (ch :: acc).reverse
         case (Nil, _: Fork) => throw new Exception("Codi incorrecte")
-        case (_, Leaf(ch, _)) => ch :: decodeRec(tree, tree, bits)
-        case (_, Fork(left, _, _, _)) if bits.head == 0 => decodeRec(tree, left, bits.tail)
-        case (_, Fork(_, right, _, _)) => decodeRec(tree, right, bits.tail)
+        case (_, Leaf(ch, _)) => decodeRec(ch :: acc,tree, bits)
+        case (0 :: bs, Fork(left, _, _, _)) => decodeRec(acc, left, bs)
+        case (1 :: bs, Fork(_, right, _, _)) => decodeRec(acc, right, bs)
+        case (b :: _,Fork(_,_,_,_)) => throw new Exception(s"$b is not a bit")
       }
     }
-    decodeRec(tree,tree,bits)
+    decodeRec(List(),tree,bits)
   }
 
   /**
@@ -215,9 +247,16 @@ trait Huffman extends HuffmanInterface {
    * This function returns the bit sequence that represents the character `char` in
    * the code table `table`.
    */
-  def codeBits(table: CodeTable)(char: Char): List[Bit] =
-    if (table.head._1 == char) table.head._2
-    else codeBits(table.tail)(char)
+  def codeBits(table: CodeTable)(char: Char): List[Bit] = {
+      @tailrec
+      def loop(table: CodeTable): List[Bit] =
+        table match {
+          case (`char`,bits) :: _ => bits
+          case _ :: xs => loop(xs)
+          case Nil => throw new Exception(s"$char not found")
+        }
+      loop(table)
+    }
 
   /**
    * Given a code tree, create a code table which contains, for every character in the
@@ -230,7 +269,7 @@ trait Huffman extends HuffmanInterface {
   def convert(tree: CodeTree): CodeTable = {
     def convertRec(tree: CodeTree, codeAcum: List[Bit] = Nil): CodeTable =
       tree match {
-        case leaf: Leaf => List((leaf.char,codeAcum.reverse))   //I'm coding them in reverse order!
+        case leaf: Leaf => List((leaf.char,codeAcum.reverse))
         case fork: Fork => mergeCodeTables(convertRec(fork.left,0 :: codeAcum),convertRec(fork.right,1 :: codeAcum))
       }
     convertRec(tree)
@@ -254,4 +293,8 @@ trait Huffman extends HuffmanInterface {
     text.flatMap(char => codeBits(codeTable)(char))
   }
 }
-object Huffman extends Huffman
+object Huffman extends Huffman {
+  def main(args: Array[String]): Unit = {
+    println(decodedSecret.mkString(""))
+  }
+}

@@ -2,10 +2,9 @@ package forcomp
 
 import org.junit._
 import org.junit.Assert.assertEquals
-
+import Anagrams._
 
 class AnagramsSuite {
-  import Anagrams._
 
   @Test def `wordOccurrences: abcd (3pts)`: Unit =
     assertEquals(List(('a', 1), ('b', 1), ('c', 1), ('d', 1)), wordOccurrences("abcd"))
@@ -97,23 +96,39 @@ class AnagramsSuite {
 
 class AnagramsSuiteExtended {
 
-  import Anagrams._
+  val oc1: Occurrences = wordOccurrences("helloses")
+  val oc2: Occurrences = wordOccurrences("hsl")
 
-  val a = for (i <- 1 to 5) yield i
-  val b = (1 to 5).map(i => i)
+  val bigOcc1: Occurrences = wordOccurrences("est que toi a perdi ta plume dans le jarden de ta tante")
+  val bigOcc2: Occurrences = wordOccurrences("perdi le jarden")
 
-  val oc1 = wordOccurrences("helloses")
-  val oc2 = wordOccurrences("hs")
+  val sentence = List("hot","potato")
 
-  val sub = subtract(oc1,oc2)
+  @Test def `subtract oc1 - oc1`: Unit =
+    assertEquals(subtract(oc1,oc1),List())
 
-  println(a)
-  println(b)
-  println(oc1)
-  println(oc2)
-  println(sub)
+  @Test def `subtract oc1 - oc2`: Unit =
+    assertEquals(subtract(oc1,oc2),List(('e',2), ('l',1), ('o',1), ('s',1)))
 
-  println(sentenceAnagrams(List("Yes","man")))
+  @Test def `subtract bigOcc1 - bigOcc2 (check sorted)`: Unit =
+    assertEquals(subtract(bigOcc1,bigOcc2),subtract(bigOcc1,bigOcc2).sortBy(occ => occ._1))
 
-  @Test def `asdf`: Unit = true
+  //el siguiente test no compila for some reason...
+  /*@Test def `sentenceAnagramsMemo`: Unit =
+    assertEquals(sentenceAnagrams(sentence),sentenceAnagramsMemo(sentence))*/
+}
+
+object AnagramsPlayground {
+
+  def main(args: Array[String]): Unit = {
+    println(sentenceAnagrams(List()))
+    val sentence: Sentence = List("My","taylor","is","rich")
+    val t1 = System.nanoTime
+    val ang1 = sentenceAnagrams(sentence)
+    println("sentenceAnagrams duration:\t"+(System.nanoTime - t1)/1e9d)
+    val t2 = System.nanoTime
+    val ang2 = sentenceAnagramsMemo(sentence)
+    println("sentenceAnagramsMemo duration:\t"+(System.nanoTime - t2)/1e9d)
+    assert(ang1 == ang2)
+  }
 }

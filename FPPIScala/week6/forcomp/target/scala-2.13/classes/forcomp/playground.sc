@@ -1,6 +1,10 @@
 import forcomp.Anagrams.{combinations, dictionaryByOccurrences, sentenceAnagrams, subtract, wordOccurrences}
 
-val a = for (i <- 1 to 5) yield i
+val a = for {
+  i <- List(1,2,3,4,5)
+  j <- List(List(1,2,3,4,5))
+} yield (i,j)
+
 val b = (1 to 5).map(i => i)
 
 val oc1 = wordOccurrences("hello")

@@ -1,0 +1,10 @@
+[0m[[0m[33mwarn[0m] [0m[0m/home/miguel/workspace/Coursera/FPPIScala/week4/patmat/src/main/scala/patmat/Huffman.scala:185:7: match may not be exhaustive.[0m
+[0m[[0m[33mwarn[0m] [0m[0mIt would fail on the following inputs: (List(0), _), (List(1), _), (List(??), _), (List(_), _), (Nil, _)[0m
+[0m[[0m[33mwarn[0m] [0m[0m      (bits, subTree) match {[0m
+[0m[[0m[33mwarn[0m] [0m[0m      ^[0m
+[0m[[0m[33mwarn[0m] [0m[0m/home/miguel/workspace/Coursera/FPPIScala/week4/patmat/src/main/scala/patmat/Huffman.scala:296:8: Huffman has a valid main method (args: Array[String])Unit,[0m
+[0m[[0m[33mwarn[0m] [0m[0m  but patmat.Huffman will not have an entry point on the JVM.[0m
+[0m[[0m[33mwarn[0m] [0m[0m  Reason: companion is a trait, which means no static forwarder can be generated.[0m
+[0m[[0m[33mwarn[0m] [0m[0mobject Huffman extends Huffman {[0m
+[0m[[0m[33mwarn[0m] [0m[0m       ^[0m
+[0m[[0m[33mwarn[0m] [0m[0mtwo warnings found[0m
