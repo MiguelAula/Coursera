@@ -72,25 +72,15 @@ trait Solver extends GameDef {
    */
   def from(initial: LazyList[(Block, List[Move])],
            explored: Set[Block]): LazyList[(Block, List[Move])] =
-    initial match {
-      case LazyList() => LazyList()
-      case (block, moves) #:: _ =>
+    if (initial.isEmpty) {
+      LazyList()
+    } else {
         val more = for {
+          (block,moves) <- initial
           nextNeighbor <- newNeighborsOnly(neighborsWithHistory(block, moves), explored)
-          if !explored.contains(nextNeighbor._1)
         } yield nextNeighbor
-        initial #::: from(more,explored ++ more.map{case(b,_) => b})
+        initial #::: from(more,explored ++ initial.map{case(b,_) => b}.filter(b => b != Block(goal,goal)))
     }
-  /*
-    initial match {
-      case LazyList() => LazyList()
-      case (block, moves) #:: _ =>
-        val next = for {
-          nextNeighbor <- newNeighborsOnly(neighborsWithHistory(block, moves), explored)
-        } yield from(LazyList(nextNeighbor), explored + block)
-        initial #::: next.flatten
-    }
-    */
 
   /**
    * The lazy list of all paths that begin at the starting block.
