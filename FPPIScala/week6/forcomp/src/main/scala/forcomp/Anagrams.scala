@@ -1,6 +1,7 @@
 package forcomp
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 object Anagrams extends AnagramsInterface {
 
@@ -36,10 +37,10 @@ object Anagrams extends AnagramsInterface {
    * Note: you must use `groupBy` to implement this method!
    */
   def wordOccurrences(w: Word): Occurrences =
-    w.toList.groupBy(elem => elem.toLower).map(pair => (pair._1, pair._2.length)).toList.sorted
+    w.toList.groupBy(_.toLower).map{case (char,charList) => (char, charList.length)}.toList.sorted
 
   /** Converts a sentence into its character occurrence list. */
-  def sentenceOccurrences(s: Sentence): Occurrences = wordOccurrences(s.reduce(_ + _))
+  def sentenceOccurrences(s: Sentence): Occurrences = wordOccurrences(s.reduceOption(_ + _).getOrElse(""))
 
   /** The `dictionaryByOccurrences` is a `Map` from different occurrences to a sequence of all
    * the words that have that occurrence count.
@@ -89,10 +90,10 @@ object Anagrams extends AnagramsInterface {
       case Nil => List(List())
       case (char,freq) :: xs =>
         val combi = combinations(xs)
-        for {
-          n <- (0 to freq).toList   //por qué tengo que poner .toList aquí???
-          rest <- combi             //si pongo combinatinos(xs) aquí, entiendo que lo estaría ejecutando n veces, cuando con 1 basta
-        } yield if (n != 0) (char, n) :: rest else rest
+        combi ::: (for {
+          n <- (1 to freq).toList
+          rest <- combi
+        } yield (char, n) :: rest)
         /* Desugared version:
         (0 to freq).toList.flatMap(n => combi.map(rest => if (n != 0) (char,n) :: rest else rest))
          */
@@ -113,10 +114,12 @@ object Anagrams extends AnagramsInterface {
     def loop(acc: Occurrences, x: Occurrences, y: Occurrences): Occurrences =
       (x, y) match {
         case (xs, Nil) => acc.reverse ::: xs
-        case ((xCh,xFreq) :: xs, (yCh,yFreq) :: ys) if xCh == yCh => loop((xCh,xFreq - yFreq) :: acc,xs,ys)
+        case ((xCh,xFreq) :: xs, (yCh,yFreq) :: ys) if xCh == yCh =>
+          val newFreq = if (xFreq - yFreq != 0) List((xCh,xFreq - yFreq)) else List()
+          loop(newFreq ::: acc,xs,ys)
         case (x :: xs, y :: ys) => loop(x :: acc,xs, y :: ys)
       }
-    loop(List(), x, y).filter(elem => elem._2 != 0)
+    loop(List(), x, y)
   }
 
   /** Returns a list of all anagram sentences of the given sentence.
@@ -164,47 +167,40 @@ object Anagrams extends AnagramsInterface {
   def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
     def getSentences(occs: Occurrences): List[Sentence] = occs match {
       case Nil => List(Nil)
-      case _ :: _ =>
+      case _ =>
         //Q: hay alguna forma de poner un valor lazy en una for comprehension?
         for {
           combi <- combinations(occs)                                 //sobre cada combinació de les occurrencies de la sentence...
-          if dictionaryByOccurrences.contains(combi)
+          wordsDic = dictionaryByOccurrences.getOrElse(combi,List())
+          if wordsDic.nonEmpty
           restSentences = getSentences(subtract(occs,combi))
-          word <- dictionaryByOccurrences(combi)                      //i sobre cada paraula trobada al diccionari que coincideixi amb les occurrencies de la combinació actual...
+          word <- wordsDic                                            //i sobre cada paraula trobada al diccionari que coincideixi amb les occurrencies de la combinació actual...
           rest <- restSentences                                       //i sobre cada frase que es pot fer amb la resta de la sentence (excloent la combinació actual)
         } yield word :: rest
-
-        /* //desugared version:
-        combinations(occs).flatMap(combi =>
-          if (dictionaryByOccurrences.contains(combi)) {
-            val sentences = getSentences(subtract(occs,combi))
-            dictionaryByOccurrences(combi).flatMap(word =>
-              sentences.map(rest => word :: rest)
-            )
-          } else {
-            List()
-          }
-        )*/
     }
     if (sentence.isEmpty) List(Nil) else getSentences(sentenceOccurrences(sentence))
   }
 
-  //a continuación... optimización semi-petándome el principio de "no side effects" de FP :)
+  /**
+   * A continuación... optimización de sentenceAnagramas semi-petándome el principio de "no side effects" de FP :)
+   * */
   def sentenceAnagramsMemo(sentence: Sentence): List[Sentence] = {
-    var storage: Map[Occurrences,List[Sentence]] = Map()
+    lazy val memoized = memoize(getSentences)
     def getSentences(occs: Occurrences): List[Sentence] = occs match {
       case Nil => List(Nil)
       case _ :: _ =>
-        lazy val sentencesCalc = for {
+        for {
           combi <- combinations(occs)
           word <- dictionaryByOccurrences.getOrElse(combi, List())
-          rest <- getSentences(subtract(occs,combi))
+          rest <- memoized(subtract(occs,combi))
         } yield word :: rest
-        val sentences = storage.getOrElse(occs,sentencesCalc)
-        if (!storage.contains(occs)) storage = storage + (occs -> sentences)
-        sentences
     }
     if (sentence.isEmpty) List(Nil) else getSentences(sentenceOccurrences(sentence))
+  }
+
+  def memoize[A,B](f: A => B): A => B = {
+    val storage = mutable.Map.empty[A,B]
+    a => storage.getOrElseUpdate(a,f(a))
   }
   /*
   def sentenceAnagramsMemo2(sentence: Sentence): List[Sentence] = {

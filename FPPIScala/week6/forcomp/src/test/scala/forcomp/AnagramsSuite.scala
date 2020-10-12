@@ -130,5 +130,7 @@ object AnagramsPlayground {
     val ang2 = sentenceAnagramsMemo(sentence)
     println("sentenceAnagramsMemo duration:\t"+(System.nanoTime - t2)/1e9d)
     assert(ang1 == ang2)
+    val l: List[Occurrences] = ???
+    l.map(a => a)
   }
 }
